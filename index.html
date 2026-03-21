@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TorreIA — Solucionario inteligente de torres de absorción</title>
+  <meta name="description" content="Calcula y diseña torres de absorción empacada con IA. NTU, HTU, línea de operación y más. Gratis."/>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+
+  <!-- AdSense (reemplaza ca-pub-XXXXXXXXXXXXXXXX con tu ID cuando lo tengas) -->
+  <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
+
+  <style>
+    :root {
+      --bg:        #080d14;
+      --bg2:       #0d1520;
+      --accent:    #00d4ff;
+      --accent2:   #00ff99;
+      --text:      #e8f0f8;
+      --muted:     #6a8aaa;
+      --border:    rgba(0,212,255,0.18);
+      --card:      rgba(13,21,32,0.85);
+      --font-head: 'Rajdhani', sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+      --font-body: 'IBM Plex Sans', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── BLUEPRINT GRID BACKGROUND ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── ANIMATED COLUMN SVG ── */
+    .column-bg {
+      position: fixed;
+      right: -60px; top: 0;
+      width: 320px; height: 100vh;
+      opacity: 0.06;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── LANG TOGGLE ── */
+    .lang-bar {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex; justify-content: flex-end; align-items: center;
+      padding: 12px 32px;
+      background: rgba(8,13,20,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .lang-btn {
+      background: none; border: 1px solid var(--border);
+      color: var(--muted); font-family: var(--font-mono);
+      font-size: 12px; padding: 4px 14px;
+      border-radius: 2px; cursor: pointer;
+      transition: all .2s;
+      letter-spacing: .08em;
+    }
+    .lang-btn.active, .lang-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .lang-btn + .lang-btn { margin-left: 6px; }
+
+    /* ── WRAPPER ── */
+    .wrapper {
+      position: relative; z-index: 1;
+      max-width: 900px; margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      justify-content: center; padding-top: 80px;
+    }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--accent); letter-spacing: .14em;
+      border: 1px solid var(--border);
+      padding: 5px 14px; border-radius: 2px;
+      margin-bottom: 28px;
+      opacity: 0; animation: fadeUp .6s .1s forwards;
+    }
+    .badge::before {
+      content: ''; width: 6px; height: 6px;
+      background: var(--accent); border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.4)} }
+
+    .hero h1 {
+      font-family: var(--font-head);
+      font-size: clamp(2.8rem, 8vw, 5.5rem);
+      font-weight: 700;
+      line-height: .95;
+      letter-spacing: -.01em;
+      margin-bottom: 10px;
+      opacity: 0; animation: fadeUp .7s .2s forwards;
+    }
+    .hero h1 span { color: var(--accent); }
+
+    .hero .tagline {
+      font-family: var(--font-mono);
+      font-size: clamp(.75rem, 1.8vw, .95rem);
+      color: var(--muted); letter-spacing: .06em;
+      margin-bottom: 36px;
+      opacity: 0; animation: fadeUp .7s .35s forwards;
+    }
+
+    .hero-desc {
+      font-size: 1.1rem; font-weight: 300;
+      color: #9ab5cc; line-height: 1.7;
+      max-width: 540px; margin-bottom: 48px;
+      opacity: 0; animation: fadeUp .7s .45s forwards;
+    }
+
+    /* ── CTA BUTTONS ── */
+    .cta-group {
+      display: flex; flex-wrap: wrap; gap: 16px;
+      opacity: 0; animation: fadeUp .7s .55s forwards;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--accent); color: #050c14;
+      font-family: var(--font-head); font-size: 1.1rem; font-weight: 700;
+      padding: 14px 32px; border-radius: 3px;
+      text-decoration: none; letter-spacing: .04em;
+      transition: transform .2s, box-shadow .2s;
+      box-shadow: 0 0 28px rgba(0,212,255,0.35);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 48px rgba(0,212,255,0.55); }
+    .btn-primary svg { flex-shrink: 0; }
+
+    .btn-donate {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: transparent;
+      border: 1px solid rgba(0,255,153,0.45);
+      color: var(--accent2);
+      font-family: var(--font-head); font-size: 1.1rem; font-weight: 600;
+      padding: 14px 32px; border-radius: 3px;
+      text-decoration: none; letter-spacing: .04em;
+      transition: all .2s;
+    }
+    .btn-donate:hover {
+      background: rgba(0,255,153,0.08);
+      border-color: var(--accent2);
+      transform: translateY(-2px);
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      border: none; border-top: 1px solid var(--border);
+      margin: 80px 0 60px;
+    }
+
+    /* ── FEATURES ── */
+    .section-label {
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--accent); letter-spacing: .18em;
+      text-transform: uppercase; margin-bottom: 20px;
+    }
+    .section-title {
+      font-family: var(--font-head); font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 700; line-height: 1.1; margin-bottom: 50px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px; margin-bottom: 80px;
+    }
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px; padding: 28px;
+      transition: border-color .25s, transform .25s;
+      position: relative; overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+      opacity: 0; transition: opacity .25s;
+    }
+    .feature-card:hover { border-color: rgba(0,212,255,.45); transform: translateY(-3px); }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-icon { font-size: 1.6rem; margin-bottom: 14px; }
+    .feature-card h3 {
+      font-family: var(--font-head); font-size: 1.15rem;
+      font-weight: 600; margin-bottom: 8px; letter-spacing: .02em;
+    }
+    .feature-card p { font-size: .88rem; color: #7a9ab8; line-height: 1.6; }
+
+    /* ── SYSTEMS STRIP ── */
+    .systems-strip {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 4px; padding: 28px 32px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 24px;
+      margin-bottom: 80px;
+    }
+    .systems-strip .label {
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--muted); letter-spacing: .12em; flex-shrink: 0;
+    }
+    .sys-tag {
+      font-family: var(--font-mono); font-size: .82rem;
+      color: var(--accent); background: rgba(0,212,255,.07);
+      border: 1px solid rgba(0,212,255,.2);
+      padding: 5px 14px; border-radius: 2px; letter-spacing: .05em;
+    }
+    .sys-tag.soon {
+      color: var(--muted); background: rgba(106,138,170,.06);
+      border-color: rgba(106,138,170,.2);
+    }
+
+    /* ── ADSENSE SLOT ── */
+    .ad-slot {
+      background: rgba(13,21,32,0.5);
+      border: 1px dashed rgba(0,212,255,0.12);
+      border-radius: 4px;
+      min-height: 100px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-family: var(--font-mono); font-size: .78rem;
+      letter-spacing: .1em; margin-bottom: 80px;
+    }
+
+    /* ── DONATION ── */
+    .donate-section {
+      background: linear-gradient(135deg, rgba(0,255,153,.05), rgba(0,212,255,.05));
+      border: 1px solid rgba(0,255,153,.2);
+      border-radius: 6px; padding: 48px 40px;
+      text-align: center; margin-bottom: 80px;
+    }
+    .donate-section h2 {
+      font-family: var(--font-head); font-size: 2rem;
+      font-weight: 700; margin-bottom: 12px;
+    }
+    .donate-section p {
+      color: #7a9ab8; max-width: 460px; margin: 0 auto 32px;
+      line-height: 1.7; font-size: .95rem;
+    }
+    .donate-perks {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 12px; margin-bottom: 36px;
+    }
+    .perk {
+      font-family: var(--font-mono); font-size: .78rem;
+      color: var(--accent2); border: 1px solid rgba(0,255,153,.25);
+      padding: 6px 16px; border-radius: 2px; letter-spacing: .06em;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0; text-align: center;
+      font-family: var(--font-mono); font-size: .78rem;
+      color: var(--muted); letter-spacing: .08em;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .reveal {
+      opacity: 0; transform: translateY(20px);
+      transition: opacity .6s, transform .6s;
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:600px){
+      .hero { padding-top:100px; }
+      .cta-group { flex-direction: column; }
+      .btn-primary, .btn-donate { justify-content: center; }
+      .donate-section { padding: 36px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Blueprint column SVG background -->
+<svg class="column-bg" viewBox="0 0 300 800" xmlns="http://www.w3.org/2000/svg">
+  <rect x="90" y="20" width="120" height="760" rx="6" fill="none" stroke="#00d4ff" stroke-width="2"/>
+  <line x1="90" y1="80" x2="210" y2="80" stroke="#00d4ff" stroke-width="1"/>
+  <line x1="90" y1="720" x2="210" y2="720" stroke="#00d4ff" stroke-width="1"/>
+  <line x1="60" y1="120" x2="90" y2="120" stroke="#00d4ff" stroke-width="1.5"/>
+  <line x1="210" y1="680" x2="240" y2="680" stroke="#00d4ff" stroke-width="1.5"/>
+  <text x="30" y="125" font-family="monospace" font-size="10" fill="#00d4ff">GAS IN</text>
+  <text x="215" y="685" font-family="monospace" font-size="10" fill="#00d4ff">LIQ IN</text>
+  <!-- packing levels -->
+  <line x1="92" y1="200" x2="208" y2="200" stroke="#00d4ff" stroke-width=".5" stroke-dasharray="4,3"/>
+  <line x1="92" y1="300" x2="208" y2="300" stroke="#00d4ff" stroke-width=".5" stroke-dasharray="4,3"/>
+  <line x1="92" y1="400" x2="208" y2="400" stroke="#00d4ff" stroke-width=".5" stroke-dasharray="4,3"/>
+  <line x1="92" y1="500" x2="208" y2="500" stroke="#00d4ff" stroke-width=".5" stroke-dasharray="4,3"/>
+  <line x1="92" y1="600" x2="208" y2="600" stroke="#00d4ff" stroke-width=".5" stroke-dasharray="4,3"/>
+</svg>
+
+<!-- Language toggle -->
+<nav class="lang-bar">
+  <button class="lang-btn active" onclick="setLang('es')" id="btn-es">ES</button>
+  <button class="lang-btn" onclick="setLang('en')" id="btn-en">EN</button>
+</nav>
+
+<!-- ══════════ HERO ══════════ -->
+<section class="hero">
+  <div class="wrapper">
+    <div class="badge" data-es="BETA · INGENIERÍA QUÍMICA" data-en="BETA · CHEMICAL ENGINEERING">
+      BETA · INGENIERÍA QUÍMICA
+    </div>
+
+    <h1>TORRE<span>IA</span></h1>
+
+    <p class="tagline" data-es="— SOLUCIONARIO INTELIGENTE DE TORRES DE ABSORCIÓN —" data-en="— INTELLIGENT SOLVER FOR PACKED ABSORPTION TOWERS —">
+      — SOLUCIONARIO INTELIGENTE DE TORRES DE ABSORCIÓN —
+    </p>
+
+    <p class="hero-desc" data-es="Calcula NTU, HTU, línea de operación y altura de relleno para sistemas NH₃-H₂O y SO₂-H₂O. Paso a paso, con IA. Gratis." data-en="Calculate NTU, HTU, operating lines, and packing height for NH₃-H₂O and SO₂-H₂O systems. Step-by-step, AI-assisted. Free.">
+      Calcula NTU, HTU, línea de operación y altura de relleno para sistemas NH₃-H₂O y SO₂-H₂O. Paso a paso, con IA. Gratis.
+    </p>
+
+    <div class="cta-group">
+      <a href="https://torre-absorcion.streamlit.app/datos" class="btn-primary" target="_blank" rel="noopener">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <span data-es="Abrir la App" data-en="Open the App">Abrir la App</span>
+      </a>
+      <a href="https://www.paypal.me/AngelRuiz494" class="btn-donate" target="_blank" rel="noopener">
+        ♡ <span data-es="Apoyar el proyecto" data-en="Support the project">Apoyar el proyecto</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<div class="wrapper">
+  <hr class="divider"/>
+
+  <!-- ══════════ FEATURES ══════════ -->
+  <div class="reveal">
+    <p class="section-label" data-es="FUNCIONALIDADES" data-en="FEATURES">FUNCIONALIDADES</p>
+    <h2 class="section-title" data-es="Todo lo que necesitas,<br>en un solo lugar." data-en="Everything you need,<br>in one place.">
+      Todo lo que necesitas,<br>en un solo lugar.
+    </h2>
+  </div>
+
+  <div class="features-grid reveal">
+    <div class="feature-card">
+      <div class="feature-icon">⚗️</div>
+      <h3 data-es="Equilibrio Líquido-Vapor" data-en="Liquid-Vapor Equilibrium">Equilibrio Líquido-Vapor</h3>
+      <p data-es="Curvas de equilibrio generadas automáticamente para NH₃-H₂O y SO₂-H₂O usando la Ley de Henry." data-en="Automatically generated equilibrium curves for NH₃-H₂O and SO₂-H₂O using Henry's Law.">
+        Curvas de equilibrio generadas automáticamente para NH₃-H₂O y SO₂-H₂O usando la Ley de Henry.
+      </p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📐</div>
+      <h3 data-es="NTU y HTU" data-en="NTU & HTU">NTU y HTU</h3>
+      <p data-es="Integración trapezoidal del NTU y cálculo de HTU con Kya configurable. Obtén Z_T con un clic." data-en="Trapezoidal NTU integration and HTU calculation with configurable Kya. Get Z_T in one click.">
+        Integración trapezoidal del NTU y cálculo de HTU con Kya configurable. Obtén Z_T con un clic.
+      </p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <h3 data-es="Solución paso a paso" data-en="Step-by-step solution">Solución paso a paso</h3>
+      <p data-es="La IA genera el procedimiento completo tal como lo pide tu profesor. Exporta en PDF o Excel." data-en="AI generates the full solution procedure as your professor would expect. Export to PDF or Excel.">
+        La IA genera el procedimiento completo tal como lo pide tu profesor. Exporta en PDF o Excel.
+      </p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h3 data-es="Gráficas interactivas" data-en="Interactive charts">Gráficas interactivas</h3>
+      <p data-es="Visualiza la línea de operación, equilibrio y puntas de torre en gráficas Plotly listas para entregar." data-en="Visualize operating lines, equilibrium, and tower endpoints in Plotly charts ready to submit.">
+        Visualiza la línea de operación, equilibrio y puntas de torre en gráficas Plotly listas para entregar.
+      </p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📤</div>
+      <h3 data-es="Exportar PDF / Excel" data-en="PDF / Excel export">Exportar PDF / Excel</h3>
+      <p data-es="Reporte completo listo para entregar, con portada, tablas, procedimiento y referencias." data-en="Complete report ready to submit, with cover page, tables, procedure, and references.">
+        Reporte completo listo para entregar, con portada, tablas, procedimiento y referencias.
+      </p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🆓</div>
+      <h3 data-es="100% Gratuito" data-en="100% Free">100% Gratuito</h3>
+      <p data-es="Sin registro. Sin tarjeta. Sin anuncios dentro de la app. Siempre disponible en la nube." data-en="No sign-up. No card. No ads inside the app. Always available in the cloud.">
+        Sin registro. Sin tarjeta. Sin anuncios dentro de la app. Siempre disponible en la nube.
+      </p>
+    </div>
+  </div>
+
+  <!-- ══════════ SYSTEMS ══════════ -->
+  <div class="systems-strip reveal">
+    <span class="label" data-es="SISTEMAS DISPONIBLES" data-en="AVAILABLE SYSTEMS">SISTEMAS DISPONIBLES</span>
+    <span class="sys-tag">NH₃ — H₂O</span>
+    <span class="sys-tag">SO₂ — H₂O</span>
+    <span class="sys-tag soon" data-es="CO₂ — MEA (próx.)" data-en="CO₂ — MEA (soon)">CO₂ — MEA (próx.)</span>
+    <span class="sys-tag soon" data-es="H₂S — H₂O (próx.)" data-en="H₂S — H₂O (soon)">H₂S — H₂O (próx.)</span>
+  </div>
+
+  <!-- ══════════ AD SLOT ══════════ -->
+  <!-- Reemplaza este bloque con tu código de AdSense cuando lo aprueben -->
+  <div class="ad-slot">
+    <!-- ADSENSE_SLOT_HORIZONTAL -->
+    <span data-es="[ ESPACIO PUBLICITARIO ]" data-en="[ AD SPACE ]">[ ESPACIO PUBLICITARIO ]</span>
+  </div>
+
+  <!-- ══════════ DONATION ══════════ -->
+  <div class="donate-section reveal">
+    <h2 data-es="¿Te fue útil?" data-en="Did it help you?">¿Te fue útil?</h2>
+    <p data-es="TorreIA es un proyecto estudiantil en desarrollo constante. Con tu apoyo puedo seguir mejorándolo y agregar más sistemas y funciones." data-en="TorreIA is a student project in constant development. Your support helps me keep improving it and add more systems and features.">
+      TorreIA es un proyecto estudiantil en desarrollo constante. Con tu apoyo puedo seguir mejorándolo y agregar más sistemas y funciones.
+    </p>
+    <div class="donate-perks">
+      <span class="perk" data-es="✓ Desbloquea exportar PDF" data-en="✓ Unlocks PDF export">✓ Desbloquea exportar PDF</span>
+      <span class="perk" data-es="✓ Desbloquea exportar Excel" data-en="✓ Unlocks Excel export">✓ Desbloquea exportar Excel</span>
+      <span class="perk" data-es="✓ Apoyas a un estudiante" data-en="✓ You support a student">✓ Apoyas a un estudiante</span>
+    </div>
+    <a href="https://www.paypal.me/AngelRuiz494" class="btn-donate" target="_blank" rel="noopener"
+       style="display:inline-flex; font-size:1.1rem; padding:16px 40px;">
+      ♡ <span data-es="Donar con PayPal" data-en="Donate with PayPal">Donar con PayPal</span>
+    </a>
+  </div>
+
+</div><!-- /wrapper -->
+
+<!-- ══════════ FOOTER ══════════ -->
+<footer>
+  <div class="wrapper">
+    <p>
+      <strong style="color:var(--accent)">TORREÍA</strong> &nbsp;·&nbsp;
+      <span data-es="Proyecto estudiantil · Universidad de Guadalajara" data-en="Student project · University of Guadalajara">Proyecto estudiantil · Universidad de Guadalajara</span>
+      &nbsp;·&nbsp;
+      <a href="https://torre-absorcion.streamlit.app/datos" target="_blank" rel="noopener" data-es="Abrir app" data-en="Open app">Abrir app</a>
+      &nbsp;·&nbsp;
+      <a href="https://www.paypal.me/AngelRuiz494" target="_blank" rel="noopener" data-es="Donar" data-en="Donate">Donar</a>
+    </p>
+    <p style="margin-top:10px; font-size:.72rem;" data-es="Hecho con ♡ para Ingeniería Química" data-en="Made with ♡ for Chemical Engineering">
+      Hecho con ♡ para Ingeniería Química
+    </p>
+  </div>
+</footer>
+
+<script>
+  // ── Language switcher ──
+  function setLang(lang) {
+    document.querySelectorAll('[data-' + lang + ']').forEach(el => {
+      if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+        el.placeholder = el.getAttribute('data-' + lang);
+      } else {
+        el.innerHTML = el.getAttribute('data-' + lang);
+      }
+    });
+    document.getElementById('btn-es').classList.toggle('active', lang === 'es');
+    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    document.documentElement.lang = lang;
+  }
+
+  // ── Scroll reveal ──
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
